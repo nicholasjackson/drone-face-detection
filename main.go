@@ -9,6 +9,7 @@ import (
 	"gocv.io/x/gocv"
 )
 
+// BySize allows sorting images by size
 type BySize []image.Rectangle
 
 func (s BySize) Len() int {
@@ -25,7 +26,10 @@ func main() {
 	deviceID := 1
 
 	// open webcam
-	webcam, err := gocv.VideoCaptureDevice(int(deviceID))
+	/*
+		webcam, err := gocv.VideoCaptureDevice(int(deviceID))
+	*/
+	webcam, err := gocv.VideoCaptureFile("rtsp://192.168.99.1/media/stream2")
 	if err != nil {
 		fmt.Printf("error opening video capture device: %v\n", deviceID)
 		return
@@ -44,7 +48,7 @@ func main() {
 
 	// color for the rect when faces detected
 	blue := color.RGBA{0, 0, 255, 0}
-	green := color.RGBA{0, 255, 0, 0}
+	//green := color.RGBA{0, 255, 0, 0}
 
 	// load classifier to recognize faces
 	classifier := gocv.NewCascadeClassifier()
@@ -58,7 +62,11 @@ func main() {
 	for {
 		if ok := webcam.Read(img); !ok {
 			fmt.Printf("cannot read device %d\n", deviceID)
-			return
+
+			webcam, err = gocv.VideoCaptureFile("rtsp://192.168.99.1/media/stream2")
+			if err != nil {
+				fmt.Printf("Unable to reconnect")
+			}
 		}
 
 		if img.Empty() {
@@ -78,11 +86,13 @@ func main() {
 			// draw a rectangle around each face on the original image
 			gocv.Rectangle(img, faces[0], blue, 3)
 
-			eyeImg := tmpImg.Region(faces[0])
-			eyes := eyeclassifier.DetectMultiScale(eyeImg)
-			for _, r := range eyes {
-				gocv.Rectangle(img, r, green, 3)
-			}
+			/*
+				eyeImg := tmpImg.Region(faces[0])
+				eyes := eyeclassifier.DetectMultiScale(eyeImg)
+				for _, r := range eyes {
+					gocv.Rectangle(img, r, green, 3)
+				}
+			*/
 		}
 
 		// show the image in the window, and wait 1 millisecond
