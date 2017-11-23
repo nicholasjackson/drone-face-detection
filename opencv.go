@@ -56,7 +56,7 @@ func (fp *FaceProcessor) DetectFaces(file string) {
 
 		// draw a rectangle around each face on the original image
 		for _, f := range faces {
-			gocv.Rectangle(img, f, blue, 3)
+			gocv.Rectangle(img, f, blue, 1)
 		}
 
 		gocv.IMWrite("./detect.jpg", img)
