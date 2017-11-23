@@ -113,6 +113,13 @@ func (m *Mat) Region(rio image.Rectangle) Mat {
 	return Mat{p: C.Mat_Region(m.p, cRect)}
 }
 
+// Mean calculates the mean value M of array elements, independently for each channel, and return it as Scalar
+// TODO pass second paramter with mask
+func (m *Mat) Mean() Scalar {
+	s := C.Mat_Mean(m.p)
+	return NewScalar(float64(s.val1), float64(s.val2), float64(s.val3), float64(s.val4))
+}
+
 // Rows returns the number of rows for this Mat.
 func (m *Mat) Rows() int {
 	return int(C.Mat_Rows(m.p))
@@ -292,6 +299,39 @@ const (
 //
 func Normalize(src Mat, dst Mat, alpha float64, beta float64, typ NormType) {
 	C.Mat_Normalize(src.p, dst.p, C.double(alpha), C.double(beta), C.int(typ))
+}
+
+// TermCriteriaType for TermCriteria.
+//
+// For further details, please see:
+// https://docs.opencv.org/3.3.1/d9/d5d/classcv_1_1TermCriteria.html#a56fecdc291ccaba8aad27d67ccf72c57
+//
+type TermCriteriaType int
+
+const (
+	// Count is the maximum number of iterations or elements to compute.
+	Count TermCriteriaType = 1
+
+	// MaxIter is the maximum number of iterations or elements to compute.
+	MaxIter = 1
+
+	// EPS is the desired accuracy or change in parameters at which the
+	// iterative algorithm stops.
+	EPS = 2
+)
+
+// TermCriteria is the criteria for iterative algorithms.
+//
+// For further details, please see:
+// https://docs.opencv.org/3.3.1/d9/d5d/classcv_1_1TermCriteria.html
+//
+type TermCriteria struct {
+	p C.TermCriteria
+}
+
+// NewTermCriteria returns a new TermCriteria.
+func NewTermCriteria(typ TermCriteriaType, maxCount int, epsilon float64) TermCriteria {
+	return TermCriteria{p: C.TermCriteria_New(C.int(typ), C.int(maxCount), C.double(epsilon))}
 }
 
 // Scalar is a 4-element vector widely used in OpenCV to pass pixel values.
