@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/gob"
+	"image"
 	"io"
 	"io/ioutil"
 	"os"
@@ -38,16 +39,8 @@ type Flight struct {
 
 // FaceDetected defines a face detection message
 type FaceDetected struct {
-	Faces  []Rectangle
-	Bounds Rectangle
-}
-
-// Rectangle defines a rectangular shape
-type Rectangle struct {
-	X      int
-	Y      int
-	Height int
-	Width  int
+	Faces  []image.Rectangle
+	Bounds image.Rectangle
 }
 
 // EncodeMessage gob encodes the message and returns a byte slice

@@ -1,7 +1,9 @@
 package main
 
 import (
+	"flag"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 
@@ -11,9 +13,14 @@ import (
 
 var processing = false
 var faceProcessor *FaceProcessor
+var nc *nats.Conn
+var natsServer = flag.String("nats", "nats://localhost:4222", "connection string for nats server")
 
 func main() {
-	nc, err := nats.Connect("nats://192.168.1.113:4222")
+	flag.Parse()
+
+	var err error
+	nc, err = nats.Connect(*natsServer)
 	if err != nil {
 		log.Fatal("Unable to connect to nats")
 	}
@@ -21,13 +28,13 @@ func main() {
 	faceProcessor = NewFaceProcessor()
 
 	sub, _ := nc.Subscribe(messages.MessageDroneImage, func(m *nats.Msg) {
-		log.Println("New Message")
-
 		if !processing {
 			go processMessage(m)
 		}
 	})
 	defer sub.Unsubscribe()
+
+	startServer()
 
 	handleExit()
 }
@@ -39,7 +46,6 @@ func handleExit() {
 }
 
 func processMessage(m *nats.Msg) {
-
 	processing = true
 	defer func() { processing = false }()
 
@@ -48,5 +54,21 @@ func processMessage(m *nats.Msg) {
 	di.DecodeMessage(m.Data)
 	di.SaveDataToFile(filename)
 
-	faceProcessor.DetectFaces(filename)
+	faces, bounds := faceProcessor.DetectFaces(filename)
+	if len(faces) > 0 {
+		fdm := messages.FaceDetected{
+			Faces:  faces,
+			Bounds: bounds,
+		}
+
+		nc.Publish(messages.MessageFaceDetection, fdm.EncodeMessage())
+	}
+}
+
+func startServer() {
+	fs := http.FileServer(http.Dir("./"))
+	http.Handle("/", fs)
+
+	log.Println("Listening...")
+	http.ListenAndServe(":4000", nil)
 }

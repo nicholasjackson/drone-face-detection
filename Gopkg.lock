@@ -23,7 +23,7 @@
   branch = "master"
   name = "github.com/nicholasjackson/drone-messages"
   packages = ["."]
-  revision = "99269504ab144c87702af6ddcc6aac130a8ff52e"
+  revision = "7e8d3ded599a6f2588e4314913d0e2b0eb31f3d0"
 
 [[projects]]
   name = "gocv.io/x/gocv"

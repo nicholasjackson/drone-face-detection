@@ -1,11 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"image"
 	"image/color"
 	"log"
-	"sort"
 
 	"gocv.io/x/gocv"
 )
@@ -25,41 +23,75 @@ func (s BySize) Less(i, j int) bool {
 
 var blue = color.RGBA{0, 0, 255, 0}
 
+// FaceProcessor detects the position of a face from an input image
 type FaceProcessor struct {
-	classifier *gocv.CascadeClassifier
+	faceclassifier  *gocv.CascadeClassifier
+	eyeclassifier   *gocv.CascadeClassifier
+	glassclassifier *gocv.CascadeClassifier
 }
 
+// NewFaceProcessor creates a new face processor loading any dependent settings
 func NewFaceProcessor() *FaceProcessor {
 	// load classifier to recognize faces
-	classifier := gocv.NewCascadeClassifier()
-	classifier.Load("./data/haarcascade_frontalface_default.xml")
+	classifier1 := gocv.NewCascadeClassifier()
+	classifier1.Load("./data/haarcascade_frontalface_default.xml")
 
-	return &FaceProcessor{&classifier}
+	classifier2 := gocv.NewCascadeClassifier()
+	classifier2.Load("./data/haarcascade_eye.xml")
+
+	classifier3 := gocv.NewCascadeClassifier()
+	classifier3.Load("./data/haarcascade_eye_tree_eyeglasses.xml")
+
+	return &FaceProcessor{
+		faceclassifier:  &classifier1,
+		eyeclassifier:   &classifier2,
+		glassclassifier: &classifier3,
+	}
 }
 
-func (fp *FaceProcessor) DetectFaces(file string) {
-	log.Println("Detect faces")
-
+// DetectFaces detects faces in the image and returns an array of rectangle
+func (fp *FaceProcessor) DetectFaces(file string) (faces []image.Rectangle, bounds image.Rectangle) {
 	img := gocv.IMRead(file, gocv.IMReadColor)
 	defer img.Close()
 
-	gocv.CvtColor(img, img, gocv.ColorRGBToGray)
-	gocv.Resize(img, img, image.Point{}, 0.3, 0.3, gocv.InterpolationArea)
+	bds := image.Rectangle{Min: image.Point{}, Max: image.Point{X: 800, Y: 600}}
+
+	//	gocv.CvtColor(img, img, gocv.ColorRGBToGray)
+	//	gocv.Resize(img, img, image.Point{}, 0.6, 0.6, gocv.InterpolationArea)
 
 	// detect faces
-	faces := fp.classifier.DetectMultiScaleWithParams(img, 1.07, 8, 0, image.Point{X: 30, Y: 30}, image.Point{X: 100, Y: 100})
+	tmpfaces := fp.faceclassifier.DetectMultiScaleWithParams(
+		img, 1.03, 3, 0, image.Point{X: 10, Y: 10}, image.Point{X: 200, Y: 200},
+	)
 
-	fmt.Printf("found %d faces\n", len(faces))
+	fcs := make([]image.Rectangle, 0)
 
-	if len(faces) > 0 {
-		sort.Sort(BySize(faces))
-
+	if len(tmpfaces) > 0 {
 		// draw a rectangle around each face on the original image
-		for _, f := range faces {
-			gocv.Rectangle(img, f, blue, 1)
+		for _, f := range tmpfaces {
+			// detect eyes
+			faceImage := img.Region(f)
+
+			eyes := fp.eyeclassifier.DetectMultiScaleWithParams(
+				faceImage, 1.03, 3, 0, image.Point{X: 0, Y: 0}, image.Point{X: 100, Y: 100},
+			)
+
+			glasses := fp.glassclassifier.DetectMultiScaleWithParams(
+				faceImage, 1.03, 3, 0, image.Point{X: 0, Y: 0}, image.Point{X: 100, Y: 100},
+			)
+
+			if len(eyes) > 0 || len(glasses) > 0 {
+				log.Println("found with eyes")
+
+				fcs = append(fcs, f)
+
+				gocv.Rectangle(img, f, blue, 1)
+				gocv.IMWrite("./detect.jpg", img)
+			}
 		}
 
-		gocv.IMWrite("./detect.jpg", img)
-		log.Println("Written image\n")
+		return fcs, bds
 	}
+
+	return nil, bds
 }
